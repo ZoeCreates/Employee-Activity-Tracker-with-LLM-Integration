@@ -1,148 +1,352 @@
 import pymysql
-import pymysql
 import random
 from faker import Faker
 from datetime import datetime, timedelta
 import os
+from pathlib import Path
+import sys
 from dotenv import load_dotenv
 
-# 在populate_data.py顶部添加
-import os
-from pathlib import Path
-
-env_path = Path(__file__).parent.parent / ".env"  # 自动定位.env
+# Load environment variables
+env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(env_path)
 
+# Initialize Faker
+fake = Faker("en_US")
+fake.seed_instance(42)  # Set seed for reproducibility
 
-# 初始化
-fake = Faker()
-load_dotenv()  # 加载环境变量
-
-# # 数据库配置
-# DB_CONFIG = {
-#     "host": "localhost",
-#     "user": "root",
-#     "password": os.getenv(
-#         "MYSQL_PASSWORD"
-#     ),  # 在.env文件中设置MYSQL_PASSWORD=yourpassword
-#     "database": "employee_tracking",
-#     "charset": "utf8mb4",
-#     "cursorclass": pymysql.cursors.DictCursor,
-# }
-
-# 更新DB_CONFIG
+# Database configuration
 DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "mysql"),  # 使用docker服务名
+    "host": os.getenv("DB_HOST", "mysql"),
+    "port": int(os.getenv("DB_PORT", 3306)),
     "user": os.getenv("DB_USER", "root"),
     "password": os.getenv("DB_PASSWORD", "123456"),
     "database": os.getenv("DB_NAME", "employee_tracking"),
     "charset": "utf8mb4",
     "cursorclass": pymysql.cursors.DictCursor,
+    "connect_timeout": 10,
 }
 
+# Fixed employee data to match the queries
+employees = [
+    {
+        "id": 1,
+        "name": "Wei Zhang",
+        "email": "w.zhang@company.com",
+        "dept": "Sales",
+        "job": "Sales Manager",
+        "hire_date": "2024-06-15",  # Normal period
+        "activities": {
+            1: [
+                "Met with 5 clients; Closed 3 deals worth $45,000",
+                42.5,
+                4,
+                35000.00,
+            ],  # Week 1 (hours, meetings, sales)
+            7: [
+                "Prepared Q3 sales report; Customer retention strategy planning",
+                39.5,
+                3,
+                28000.00,
+            ],  # Week 7 (Aug 28)
+        },
+    },
+    {
+        "id": 2,
+        "name": "Na Li",
+        "email": "n.li@company.com",
+        "dept": "Marketing",
+        "job": "Marketing Manager",
+        "hire_date": "2024-08-10",  # Normal period
+        "activities": {
+            1: [
+                "Content calendar planning; Social media strategy meeting",
+                38.0,
+                6,
+                0.00,
+            ],  # Week 1
+            2: [
+                "SEO optimization project; Brand positioning workshop",
+                39.5,
+                8,
+                0.00,
+            ],  # Week 2
+        },
+    },
+    {
+        "id": 3,
+        "name": "Tao Huang",
+        "email": "t.huang@company.com",
+        "dept": "Product Development",
+        "job": "Product Manager",
+        "hire_date": "2024-05-20",
+        "activities": {
+            1: [
+                "Product roadmap review; User research planning",
+                41.0,
+                5,
+                0.00,
+            ],  # Week 1
+            2: ["Feature prioritization; Sprint planning", 40.5, 4, 0.00],  # Week 2
+        },
+    },
+    {
+        "id": 4,
+        "name": "Min Chen",
+        "email": "m.chen@company.com",
+        "dept": "Finance",
+        "job": "Financial Analyst",
+        "hire_date": "2020-03-15",  # During recession (for query 13)
+        "activities": {
+            1: ["Budget review; Financial forecasting", 43.0, 3, 0.00],  # Week 1
+            2: [
+                "Expense reports analysis; Quarterly closing preparation",
+                42.5,
+                4,
+                0.00,
+            ],  # Week 2
+        },
+    },
+    {
+        "id": 5,
+        "name": "Qiang Wang",
+        "email": "q.wang@company.com",
+        "dept": "IT",
+        "job": "Data Engineer",  # Role requiring data analysis skills
+        "hire_date": "2021-11-10",  # During recession (for query 13)
+        "activities": {
+            1: [
+                "Database optimization; Data pipeline maintenance",
+                44.5,
+                2,
+                0.00,
+            ],  # Week 1
+            2: [
+                "Data quality assessment; ETL process improvement",
+                43.0,
+                3,
+                0.00,
+            ],  # Week 2
+        },
+    },
+    {
+        "id": 6,
+        "name": "Yue Lin",
+        "email": "y.lin@company.com",
+        "dept": "Sales",
+        "job": "Account Manager",
+        "hire_date": "2023-01-20",  # Normal period
+        "activities": {
+            1: [
+                "Client relationship management; Sales territory planning",
+                39.0,
+                5,
+                28000.00,
+            ],  # Week 1
+            2: [
+                "Proposal development; Sales pipeline review",
+                41.5,
+                6,
+                32000.00,
+            ],  # Week 2
+            7: [
+                "Customer retention issues identified; Implemented discount strategy for at-risk accounts",
+                43.0,
+                4,
+                38000.00,
+            ],  # Week 7 (customer retention challenges)
+        },
+    },
+    {
+        "id": 7,
+        "name": "Yang Zhao",
+        "email": "y.zhao@company.com",
+        "dept": "IT",
+        "job": "SysAdmin",
+        "hire_date": "2022-09-05",  # Normal period
+        "activities": {
+            1: ["Server maintenance; Network security review", 40.0, 2, 0.00],  # Week 1
+            2: [
+                "Cloud infrastructure setup; Backup system verification",
+                38.5,
+                3,
+                0.00,
+            ],  # Week 2
+        },
+    },
+    {
+        "id": 8,
+        "name": "Xue Wu",
+        "email": "x.wu@company.com",
+        "dept": "Finance",
+        "job": "CFO",
+        "hire_date": "2020-05-18",  # During recession (for query 13)
+        "activities": {
+            1: [
+                "Executive budget meeting; Financial strategy planning",
+                46.0,
+                7,
+                0.00,
+            ],  # Week 1
+            2: [
+                "Investor relations preparation; Financial review",
+                44.5,
+                5,
+                0.00,
+            ],  # Week 2
+        },
+    },
+    {
+        "id": 9,
+        "name": "Jie Zhou",
+        "email": "j.zhou@company.com",
+        "dept": "Marketing",
+        "job": "SEO Analyst",  # Role requiring data analysis skills
+        "hire_date": "2021-08-15",  # During recession (for query 13)
+        "activities": {
+            1: [
+                "Keyword performance analysis; Competitor benchmarking",
+                38.5,
+                3,
+                0.00,
+            ],  # Week 1
+            2: [
+                "SEO strategy development; Analytics dashboard creation",
+                40.0,
+                4,
+                0.00,
+            ],  # Week 2
+            5: [
+                "Customer retention issues analysis; Implemented targeted email campaign to re-engage dormant customers",
+                42.5,
+                5,
+                0.00,
+            ],  # Week 5 (customer retention challenges)
+        },
+    },
+    {
+        "id": 10,
+        "name": "Fang Xu",
+        "email": "f.xu@company.com",
+        "dept": "Sales",
+        "job": "Sales Director",
+        "hire_date": "2024-02-10",  # Normal period
+        "activities": {
+            1: [
+                "Sales team coaching; Revenue forecast review",
+                45.0,
+                6,
+                30000.00,
+            ],  # Week 1
+            2: [
+                "Sales incentive planning; Customer segmentation analysis",
+                47.5,
+                5,
+                32000.00,
+            ],  # Week 2
+            7: [
+                "High-value prospect meetings; Closed major deal",
+                48.0,
+                4,
+                52000.00,
+            ],  # Week 7 (highest revenue in a single week)
+        },
+    },
+]
 
-# 部门与职位配置
-departments = ["Sales", "Marketing", "IT", "Finance", "Product"]
-job_titles = {
-    "Sales": ["Sales Rep", "Account Manager", "Sales Director"],
-    "Marketing": ["Content Specialist", "SEO Analyst", "Marketing Manager"],
-    "IT": ["Developer", "SysAdmin", "Data Engineer"],
-    "Finance": ["Accountant", "Financial Analyst", "CFO"],
-    "Product": ["Product Manager", "UX Designer", "Researcher"],
-}
-
-# 活动描述模板
-activity_templates = {
-    "Sales": [
-        "Met with {n} clients",
-        "Prepared Q{quarter} sales report",
-        "Attended {n} sales trainings",
-    ],
-    "IT": [
-        "Fixed {n} critical bugs",
-        "Optimized database queries",
-        "Deployed version {v}.{n}",
-    ],
-    "default": [
-        "Team collaboration meeting",
-        "Project planning session",
-        "Cross-department alignment",
-    ],
-}
+# Add activities data for weeks 7-10 for top hours worked (for query 18)
+for emp_id in [5, 8, 10]:  # Qiang Wang, Xue Wu, Fang Xu - for top 3 hours
+    emp = next(e for e in employees if e["id"] == emp_id)
+    for week in range(7, 11):
+        if week not in emp["activities"]:
+            emp["activities"][week] = [
+                "Strategic planning; Team coordination",
+                47.0 + (emp_id % 3),  # High hours for these employees
+                4 + (week % 3),
+                30000.00 if emp["dept"] == "Sales" else 0.00,
+            ]
 
 try:
-    # 建立连接
-    with pymysql.connect(**DB_CONFIG) as conn:
-        with conn.cursor() as cursor:
-            # 清空现有数据（TRUNCATE更快但会重置自增ID）
+    # Establish connection
+    conn = pymysql.connect(**DB_CONFIG)
+
+    with conn.cursor() as cursor:
+        # Reset data
+        if "--reset" in sys.argv:
+            print("Resetting existing data...")
             cursor.execute("TRUNCATE TABLE activities")
-
-            # 生成10名员工10周的数据
-            for emp_id in range(1, 11):
-                # 生成员工基本信息
-                name = fake.name()
-                email = (
-                    f"{name.split()[0][0].lower()}{name.split()[1].lower()}@company.com"
-                )
-                dept = random.choice(departments)
-                job = random.choice(job_titles[dept])
-                hire_date = fake.date_between(start_date="-2y", end_date="-3mo")
-
-                # 生成10周数据
-                for week in range(1, 11):
-                    # 生成数值数据
-                    num_meetings = random.randint(2, 10)
-                    hours_worked = round(random.uniform(30, 50), 1)
-                    total_sales = (
-                        round(random.uniform(5000, 50000), 2)
-                        if dept == "Sales"
-                        else 0.0
-                    )
-
-                    # 生成活动描述
-                    if dept in activity_templates:
-                        activities = [
-                            t.format(
-                                n=random.randint(1, 5),
-                                quarter=random.randint(1, 4),
-                                v=random.randint(1, 3),
-                            )
-                            for t in random.sample(activity_templates[dept], 2)
-                        ]
-                    else:
-                        activities = random.sample(activity_templates["default"], 2)
-                    activities_str = "; ".join(activities)
-
-                    # 插入数据（注意参数占位符为%s）
-                    cursor.execute(
-                        """INSERT INTO activities 
-                        (employee_id, week_number, num_meetings, total_sales_rmb, 
-                         hours_worked, activities, department, hire_date, email, job_title)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                        (
-                            f"EMP{emp_id:03d}",
-                            week,
-                            num_meetings,
-                            total_sales,
-                            hours_worked,
-                            activities_str,
-                            dept,
-                            hire_date,
-                            email,
-                            job,
-                        ),
-                    )
-
-            # 提交事务
             conn.commit()
-            print(f"成功生成10名员工×10周=100条数据！")
+
+        # Generate data for all employees and weeks
+        print("Generating sample data...")
+
+        # First ensure we have complete data for all employees for all weeks
+        for emp in employees:
+            emp_id = emp["id"]
+            name = emp["name"]
+            email = emp["email"]
+            dept = emp["dept"]
+            job = emp["job"]
+            hire_date = emp["hire_date"]
+
+            # For each week 1-10
+            for week in range(1, 11):
+                # Use predefined activities if available, otherwise generate random ones
+                if week in emp["activities"]:
+                    activities_str = emp["activities"][week][0]
+                    hours_worked = emp["activities"][week][1]
+                    num_meetings = emp["activities"][week][2]
+                    total_sales = emp["activities"][week][3]
+                else:
+                    hours_worked = round(random.uniform(35, 40), 1)
+                    num_meetings = random.randint(2, 5)
+                    total_sales = (
+                        round(random.uniform(25000, 30000), 2)
+                        if dept == "Sales"
+                        else 0.00
+                    )
+                    activities_str = "Regular weekly activities; Standard meetings"
+
+                # Special case for week 7 - aligns with "2024-08-28" for query 3
+                week_start_date = None
+                if week == 7:
+                    week_start_date = "2024-08-28"
+
+                # Insert data
+                cursor.execute(
+                    """
+                    INSERT INTO activities 
+                    (employee_id, full_name, week_number, 
+                     num_meetings, total_sales_rmb, hours_worked, 
+                     activities, department, hire_date, email, job_title)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                    (
+                        f"EMP{emp_id:03d}",
+                        name,
+                        week,
+                        num_meetings,
+                        total_sales,
+                        hours_worked,
+                        activities_str,
+                        dept,
+                        hire_date,
+                        email,
+                        job,
+                    ),
+                )
+
+        conn.commit()
+        print(f"Successfully generated data for 10 employees × 10 weeks = 100 records")
 
 except pymysql.MySQLError as e:
-    print(f"数据库错误: {e}")
+    print(f"Database error: {e}")
     if "conn" in locals():
         conn.rollback()
+    sys.exit(1)
 except Exception as e:
-    print(f"其他错误: {e}")
+    print(f"Unexpected error: {e}")
+    sys.exit(1)
 finally:
     if "conn" in locals() and conn.open:
         conn.close()

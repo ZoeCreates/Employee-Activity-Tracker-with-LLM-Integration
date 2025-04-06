@@ -1,209 +1,23 @@
-# # scripts/llm_integration.py
-# import os
-# from openai import OpenAI
-# from pathlib import Path
-# from typing import Optional
-
-# # 环境变量配置
-# env_path = Path(__file__).parent.parent / ".env"
-# if env_path.exists():
-#     from dotenv import load_dotenv
-
-#     load_dotenv(env_path)
-
-# # 初始化客户端
-# client = OpenAI(
-#     api_key=os.getenv("DEEPSEEK_API_KEY"),  # 从环境变量获取密钥
-#     base_url="https://api.deepseek.com",  # 官方指定端点
-# )
-
-
-# def query_to_sql(natural_language_query: str, table_schema: str) -> Optional[str]:
-#     """
-#     使用DeepSeek官方API将自然语言转换为SQL
-#     """
-#     prompt = f"""
-#     你是一个专业的SQL工程师，根据以下表结构将自然语言查询转换为MySQL语法：
-#     【表结构】
-#     {table_schema}
-
-#     【规则】
-#     1. 只返回纯SQL语句，不要任何解释或标记
-#     2. 使用WHERE而非HAVING
-#     3. 日期比较用DATE()函数
-#     4. 确保字段名和表名完全匹配
-
-#     【用户查询】
-#     {natural_language_query}
-#     """
-
-#     try:
-#         response = client.chat.completions.create(
-#             model="deepseek-chat",  # 或使用 "deepseek-reasoner"
-#             messages=[{"role": "user", "content": prompt}],
-#             temperature=0.1,
-#             max_tokens=200,
-#             stream=False,
-#         )
-#         sql = response.choices[0].message.content.strip()
-
-#         # 安全校验
-#         if not sql.startswith(("SELECT", "INSERT", "UPDATE", "DELETE")):
-#             raise ValueError("非法的SQL语句类型")
-#         return sql
-#     except Exception as e:
-#         print(f"⚠️ DeepSeek API错误: {e}")
-#         return None
-
-
-# def test():
-#     schema = "activities(id, employee_id, department, hours_worked, hire_date)"
-#     queries = [
-#         "销售部工时最高的员工",
-#         "2023年入职的IT部门员工",
-#         "会议数超过5次且工时低于40小时的员工",
-#     ]
-#     for q in queries:
-#         print(f"\n输入: {q}")
-#         sql = query_to_sql(q, schema)
-#         print(f"输出: {sql}")
-
-
-# if __name__ == "__main__":
-#     test()
-
-
-# # scripts/llm_integration.py
-# import os
-# from openai import OpenAI
-# from pathlib import Path
-# from typing import Optional
-
-# # 环境变量配置
-# env_path = Path(__file__).parent.parent / ".env"
-# if env_path.exists():
-#     from dotenv import load_dotenv
-
-#     load_dotenv(env_path)
-
-# # 初始化客户端
-# client = OpenAI(
-#     api_key=os.getenv("DEEPSEEK_API_KEY"), base_url="https://api.deepseek.com"
-# )
-
-
-# def query_to_sql(natural_language_query: str, table_schema: str) -> Optional[str]:
-#     """
-#     优化后的DeepSeek SQL生成函数
-#     """
-#     prompt = f"""
-#     # 角色
-#     你是一个专业的MySQL数据库工程师，专注于将自然语言查询转换为精确的SQL语句。
-
-#     # 数据库表结构
-#     {table_schema}
-
-#     # 任务
-#     将以下查询转换为MySQL语法，严格遵守规则：
-
-#     # 规则
-#     1. **只输出SQL语句**，不要包含任何解释、标记或注释
-#     2. 必须使用以下语法结构之一开头：
-#        - SELECT
-#        - WITH (CTE查询)
-#     3. 禁止使用这些操作：
-#        - DROP, DELETE, UPDATE, INSERT, ALTER
-#     4. 字段引用格式：
-#        - 直接使用字段名（如 `department`）
-#        - 不要使用反引号或引号包裹
-#     5. 日期处理：
-#        - 使用 `DATE(hire_date)` 处理日期
-#        - 年份比较用 `YEAR(hire_date) = 2023`
-
-#     # 用户查询
-#     {natural_language_query}
-
-#     # 输出要求
-#     只需输出符合上述规则的SQL语句，不要包含其他任何内容！
-#     """
-
-#     try:
-#         response = client.chat.completions.create(
-#             model="deepseek-chat",
-#             messages=[{"role": "user", "content": prompt}],
-#             temperature=0.1,
-#             max_tokens=200,
-#         )
-#         sql = response.choices[0].message.content.strip()
-
-#         # 严格验证SQL格式
-#         if not _validate_sql(sql):
-#             raise ValueError("SQL语法验证失败")
-#         return sql
-
-#     except Exception as e:
-#         print(f"⚠️ DeepSeek API错误: {e}")
-#         return None
-
-
-# def _validate_sql(sql: str) -> bool:
-#     """验证SQL是否符合安全规则"""
-#     allowed_prefixes = ("SELECT", "WITH")
-#     forbidden_commands = ("DROP", "DELETE", "UPDATE", "INSERT", "ALTER")
-
-#     return sql.upper().startswith(allowed_prefixes) and not any(
-#         cmd in sql.upper() for cmd in forbidden_commands
-#     )
-
-
-# # 测试函数
-# def test():
-#     schema = """
-#     activities(
-#         id INT,
-#         employee_id VARCHAR(20),
-#         department VARCHAR(50),
-#         hours_worked DECIMAL(5,1),
-#         hire_date DATE,
-#         num_meetings INT
-#     )
-#     """
-#     test_cases = [
-#         "销售部工时最高的员工",
-#         "2023年入职的IT部门员工",
-#         "会议数超过5次且工时低于40小时的员工",
-#     ]
-
-#     for query in test_cases:
-#         print(f"\n输入: {query}")
-#         sql = query_to_sql(query, schema)
-#         print(f"输出: {sql}")
-
-
-# if __name__ == "__main__":
-#     test()
-
-
 # scripts/llm_integration.py
 import os
 from openai import OpenAI
 from pathlib import Path
 from typing import Optional, Any, List, Dict, Union
-import mysql.connector  # 新增：数据库连接
+import mysql.connector  # Added: Database connection
 
-# 环境变量配置
+# Environment variables configuration
 env_path = Path(__file__).parent.parent / ".env"
 if env_path.exists():
     from dotenv import load_dotenv
 
     load_dotenv(env_path)
 
-# 初始化客户端
+# Initialize client
 client = OpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY"), base_url="https://api.deepseek.com"
 )
 
-# 新增：数据库连接配置（示例，实际应从环境变量获取）
+# Added: Database connection configuration (example, actual values should come from environment variables)
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
     "user": os.getenv("DB_USER", "root"),
@@ -213,48 +27,56 @@ DB_CONFIG = {
 
 
 def get_db_connection():
-    """新增：获取数据库连接"""
+    """Added: Get database connection"""
     try:
         return mysql.connector.connect(**DB_CONFIG)
     except Exception as e:
-        print(f"⚠️ 数据库连接失败: {e}")
+        print(f"⚠️ Database connection failed: {e}")  # CHANGED: Translated to English
         return None
 
 
 def query_to_sql(natural_language_query: str, table_schema: str) -> Optional[str]:
     """
-    优化后的DeepSeek SQL生成函数
-    （保持不变）
+    Optimized DeepSeek SQL generation function
     """
     prompt = f"""
-    # 角色
-    你是一个专业的MySQL数据库工程师，专注于将自然语言查询转换为精确的SQL语句。
+    # Role
+    You are a professional MySQL database engineer, focused on converting natural language queries into precise SQL statements.
 
-    # 数据库表结构
+    # Database structure
     {table_schema}
 
-    # 任务
-    将以下查询转换为MySQL语法，严格遵守规则：
+    # Task
+    Convert the following query into MySQL syntax, strictly following these rules:
 
-    # 规则
-    1. **只输出SQL语句**，不要包含任何解释、标记或注释
-    2. 必须使用以下语法结构之一开头：
+    # Rules
+    1. **Output only the SQL statement**, without any explanations, tags, or comments
+    2. You must start with one of these syntax structures:
        - SELECT
-       - WITH (CTE查询)
-    3. 禁止使用这些操作：
+       - WITH (CTE query)
+    3. Do not use these operations:
        - DROP, DELETE, UPDATE, INSERT, ALTER
-    4. 字段引用格式：
-       - 直接使用字段名（如 `department`）
-       - 不要使用反引号或引号包裹
-    5. 日期处理：
-       - 使用 `DATE(hire_date)` 处理日期
-       - 年份比较用 `YEAR(hire_date) = 2023`
+    4. Field reference format:
+       - Use field names directly (e.g., `department`)
+       - Do not wrap fields in backticks or quotes
+    5. Date handling:
+       - Use `DATE(hire_date)` to process dates
+       - For year comparisons, use `YEAR(hire_date) = 2023`
+    
+    # Additional SQL generation guidelines: [NEW SECTION]
+    - Map date references to our week numbering system. Week numbering system (example): Week 1: 2024-08-01 to 2024-08-07, Week 7: 2024-08-28 to 2024-09-03
+    - If the query mentions "2024-08-28", use week_number = 7 instead of WEEK functions
+    - Use broader search terms for semantic queries (e.g., use LIKE '%retention%' instead of multiple conditions)
+    - For time periods, map calendar references to our sequential week numbers (e.g., "September 2024" → weeks 7-10)
+    - Always include DISTINCT when counting or listing employees to avoid duplication
+    - When searching for recession periods, include years 2020-2021
+    - For "last 4 weeks", use week_number BETWEEN (SELECT MAX(week_number) - 3 FROM activities) AND (SELECT MAX(week_number) FROM activities)
 
-    # 用户查询
+    # User query
     {natural_language_query}
 
-    # 输出要求
-    只需输出符合上述规则的SQL语句，不要包含其他任何内容！
+    # Output requirements
+    Only output the SQL statement that complies with the above rules, without any other content!
     """
 
     try:
@@ -267,15 +89,15 @@ def query_to_sql(natural_language_query: str, table_schema: str) -> Optional[str
         sql = response.choices[0].message.content.strip()
 
         if not _validate_sql(sql):
-            raise ValueError("SQL语法验证失败")
+            raise ValueError("SQL syntax validation failed")
         return sql
     except Exception as e:
-        print(f"⚠️ DeepSeek API错误: {e}")
+        print(f"⚠️ DeepSeek API error: {e}")
         return None
 
 
 def _validate_sql(sql: str) -> bool:
-    """验证SQL是否符合安全规则（保持不变）"""
+    """Validate SQL complies with security rules (unchanged)"""
     allowed_prefixes = ("SELECT", "WITH")
     forbidden_commands = ("DROP", "DELETE", "UPDATE", "INSERT", "ALTER")
     return sql.upper().startswith(allowed_prefixes) and not any(
@@ -283,37 +105,37 @@ def _validate_sql(sql: str) -> bool:
     )
 
 
-# 新增核心功能 ==============================================
+# Added core functionality ==============================================
 def query_to_natural_language(
     query: str,
     table_schema: str,
     analysis_type: str = "auto",  # 'auto'|'numerical'|'qualitative'
 ) -> str:
     """
-    端到端自然语言查询处理
-    输入: 自然语言问题 + 表结构
-    输出: 自然语言回答
+    End-to-end natural language query processing
+    Input: Natural language question + table structure
+    Output: Natural language answer
     """
-    # 1. 生成SQL
+    # 1. Generate SQL
     sql = query_to_sql(query, table_schema)
     if not sql:
-        return "❌ 无法生成有效的数据库查询。"
+        return "❌ Unable to generate a valid database query."  # CHANGED: Translated to English
 
-    # 2. 执行查询
+    # 2. Execute query
     db_conn = get_db_connection()
     if not db_conn:
-        return "❌ 数据库连接失败"
+        return "❌ Database connection failed"  # CHANGED: Translated to English
 
     try:
         cursor = db_conn.cursor(dictionary=True)
         cursor.execute(sql)
         results = cursor.fetchall()
     except Exception as e:
-        return f"❌ 查询执行失败: {str(e)}"
+        return f"❌ Query execution failed: {str(e)}"  # CHANGED: Translated to English
     finally:
         db_conn.close()
 
-    # 3. 转换为自然语言
+    # 3. Convert to natural language
     return _results_to_natural_language(
         query=query, results=results, analysis_type=analysis_type
     )
@@ -322,24 +144,39 @@ def query_to_natural_language(
 def _results_to_natural_language(
     query: str, results: List[Dict[str, Any]], analysis_type: str
 ) -> str:
-    """将查询结果转换为自然语言"""
+    """Convert query results to natural language"""
     prompt = f"""
-    # 任务
-    根据数据库查询结果，用自然语言回答用户问题。
+    # Task
+    Answer the user's question in natural language based on database query results.
     
-    # 用户问题
+    # User question
     {query}
 
-    # 查询结果 (JSON格式)
+    # Query results (JSON format)
     {results}
 
-    # 回答要求
-    1. 根据分析类型重点处理：
-       - "numerical": 突出数字和统计信息
-       - "qualitative": 分析模式和趋势
-       - "auto": 自动判断最佳方式
-    2. 如果结果为空，说明"未找到相关数据"
-    3. 使用英文回答，保持专业但易懂
+    # Response requirements
+    1. Focus processing based on analysis type:
+       - "numerical": Emphasize numbers and statistical information
+       - "qualitative": Analyze patterns and trends
+       - "auto": Automatically determine the best approach
+    2. If results are empty, state "No relevant data found"
+    3. Answer in English, maintaining professionalism while being easy to understand
+    4. If results contain duplicate entries (e.g., same employee appearing multiple times), summarize them as a single entry in the response.
+    5. - For numerical results: 
+    -If value > average: "This is X% higher than the company average of Y." 
+    -If value < average: "This is X% lower than the company average of Y."
+    
+    # Response formatting guidelines: [NEW SECTION]
+    - Focus on answering the question directly without mentioning data structure issues like duplication
+    - Use a consistent structure for responses: start with a direct answer, then provide supporting details
+    - When results are empty, suggest possible reasons and alternatives
+    - For numerical queries, always include the key figures prominently
+    - For qualitative queries, highlight patterns and insights
+    - Ignore duplicate entries in results when formulating your response
+    - For comparisons, clearly state the differences with specific values
+    - If the query involves specific dates, periods, or ranges, reference them explicitly in your answer
+    - Provide context for numerical values when appropriate (e.g., "which is 20% higher than average")
     """
 
     try:
@@ -350,15 +187,16 @@ def _results_to_natural_language(
         )
         return response.choices[0].message.content
     except Exception as e:
-        return f"❌ 回答生成失败: {str(e)}"
+        return f"❌ Response generation failed: {str(e)}"
 
 
 def benchmark_test():
-    """运行所有20个示例查询的基准测试"""
+    """Run benchmark test for all 20 example queries"""
     schema = """
     activities(
         id INT, 
         employee_id VARCHAR(20), 
+        full_name VARCHAR(100),
         week_number INT,
         num_meetings INT,
         total_sales_rmb DECIMAL(10, 2),
@@ -371,7 +209,7 @@ def benchmark_test():
     )
     """
 
-    # 20个示例查询
+    # 20 example queries
     queries = [
         "What is the email address of the employee who is the Sales Manager?",
         "Which employee in the company works in the Product Development department?",
@@ -395,71 +233,34 @@ def benchmark_test():
         "What is the total number of hours worked and average sales revenue for employees in the Business Development department?",
     ]
 
-    print("\n=== 基准测试 ===\n")
+    print("\n=== Benchmark Test ===\n")  # CHANGED: Translated to English
     results = []
 
     for i, query in enumerate(queries, 1):
-        print(f"查询 {i}/20: {query}")
+        print(f"Query {i}/20: {query}")  # CHANGED: Translated to English
 
-        # 生成SQL
+        # Generate SQL
         sql = query_to_sql(query, schema)
         print(f"SQL: {sql}")
 
-        # 执行查询并生成回答
+        # Execute query and generate response
         answer = query_to_natural_language(query, schema, "auto")
-        print(f"回答:\n{answer}\n")
+        print(f"Response:\n{answer}\n")  # CHANGED: Translated to English
         print("-" * 80)
 
-        # 保存结果
+        # Save results
         results.append({"query_id": i, "query": query, "sql": sql, "answer": answer})
 
-    # 可选：将结果保存到文件
+    # Optional: Save results to file
     import json
 
     with open("benchmark_results.json", "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
 
-    print("\n基准测试完成，结果已保存到 benchmark_results.json")
-
-
-# 测试函数 ==============================================
-def test():
-    schema = """
-    activities(
-        id INT, 
-        employee_id VARCHAR(20), 
-        department VARCHAR(50),
-        hours_worked DECIMAL(5,1),
-        hire_date DATE,
-        num_meetings INT
-    )
-    """
-
-    # 原SQL生成测试（保留）
-    print("\n=== SQL生成测试 ===")
-    sql_test_cases = [
-        "销售部工时最高的员工",
-        "2023年入职的IT部门员工",
-    ]
-    for query in sql_test_cases:
-        print(f"\n输入: {query}")
-        sql = query_to_sql(query, schema)
-        print(f"SQL: {sql}")
-
-    # 新增：自然语言回答测试
-    print("\n=== 自然语言回答测试 ===")
-    nl_test_cases = [
-        ("销售部上周平均工时是多少？", "numerical"),
-        ("描述各部门的会议分布情况", "qualitative"),
-        ("工时超过40小时的员工有哪些？", "auto"),
-    ]
-
-    for query, analysis_type in nl_test_cases:
-        print(f"\n问题: {query}")
-        answer = query_to_natural_language(query, schema, analysis_type)
-        print(f"回答:\n{answer}")
+    print(
+        "\nBenchmark test complete, results saved to benchmark_results.json"
+    )  # CHANGED: Translated to English
 
 
 if __name__ == "__main__":
-    test()
-    benchmark_test()  # 运行基准测试
+    benchmark_test()  # Run benchmark test

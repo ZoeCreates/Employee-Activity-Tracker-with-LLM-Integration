@@ -1,3 +1,4 @@
+
 # 📊 How to Use the System
 
 This guide walks you through how to run the project **from scratch**, including container setup, database initialization, and LLM-powered querying.
@@ -187,6 +188,10 @@ If you've completed all steps, you now have:
 * ✅ A running MySQL + Python containerized system
 * ✅ Visual analytics of employee behavior
 * ✅ Natural language to SQL conversion powered by DeepSeek LLM
+
+![image](https://github.com/user-attachments/assets/0505411a-07df-4ad4-8f72-03287b3679ed)
+
+  
 
 
 

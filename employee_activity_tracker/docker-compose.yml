@@ -1,0 +1,33 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql_dev
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+      MYSQL_DATABASE: "employee_tracking"
+    volumes:
+      - ~/mysql_data:/var/lib/mysql
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck: # 新增健康检查配置
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+
+  app:
+    build: . # 使用当前目录的Dockerfile
+    stdin_open: true # 保持标准输入打开
+    tty: true # 分配伪终端
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    working_dir: /app/scripts
+    environment:
+      - DB_HOST=mysql
+      - DB_USER=root
+      - DB_PASSWORD=123456
+      - DB_NAME=employee_tracking

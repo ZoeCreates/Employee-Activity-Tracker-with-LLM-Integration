@@ -2,7 +2,7 @@ import pymysql
 import os
 
 # 读取 SQL 文件
-with open("scripts/init_db.sql", "r") as f:
+with open("init_db.sql", "r") as f:
     sql = f.read()
 
 # 连接数据库

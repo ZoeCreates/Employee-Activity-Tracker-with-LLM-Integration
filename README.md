@@ -13,11 +13,12 @@ nano .env
 Paste the following content (replace the API key with your actual one):
 
 ```
+# 数据库配置
 DB_HOST=mysql
 DB_USER=root
 DB_PASSWORD=123456
 DB_NAME=employee_tracking
-MYSQL_ROOT_PASSWORD=123456
+MYSQL_PASSWORD=123456
 DEEPSEEK_API_KEY=your-deepseek-api-key-here
 ```
 

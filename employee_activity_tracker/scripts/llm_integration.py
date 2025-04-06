@@ -71,6 +71,13 @@ def query_to_sql(natural_language_query: str, table_schema: str) -> Optional[str
     - Always include DISTINCT when counting or listing employees to avoid duplication
     - When searching for recession periods, include years 2020-2021
     - For "last 4 weeks", use week_number BETWEEN (SELECT MAX(week_number) - 3 FROM activities) AND (SELECT MAX(week_number) FROM activities)
+    - For customer experience/retention queries, use:
+    WHERE activities LIKE '%customer retention%'
+     OR activities LIKE '%retention%'
+     OR activities LIKE '%engagement%'
+     OR activities LIKE '%feedback%'
+     OR activities LIKE '%challenge%'
+     OR activities LIKE '%solution%'
 
     # User query
     {natural_language_query}

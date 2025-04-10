@@ -1,3 +1,25 @@
+# 🧠 Employee Activity Tracker with LLM Integration
+A full-stack system to track, visualize, and query employee activity data using natural language powered by DeepSeek LLM. Includes automated visual dashboards and smart SQL generation — all containerized with Docker.
+## 🚀 Features
+
+📊 Data Visualization – Generate insightful charts on department distribution, working hours, sales trends, meeting counts, and correlations
+🤖 LLM Integration – Ask natural language questions like "Who worked overtime last week?" and receive accurate, human-readable answers
+🐳 Dockerized – Run both the backend and MySQL in containers using Docker Compose
+
+## 🗂️ Project Structure
+bashemployee_activity_tracker/
+├── scripts/
+│   ├── llm_integration.py        # Natural language query → SQL → Result → Explanation
+│   ├── populate_data.py          # Insert sample employee activity records
+│   ├── visualize_db.py           # Generate charts using Matplotlib & Seaborn
+│   ├── init_db.sql               # MySQL schema setup
+│   ├── benchmark_results.json    # LLM query output results
+│   └── visualizations/           # Output chart images (.png)
+├── mysql_data/                   # MySQL data volume (auto-managed)
+├── docker-compose.yml            # Docker setup for app + MySQL
+├── requirements.txt              # Python dependencies
+├── .env.template                 # Sample environment config
+└── .gitignore
 
 # 📊 How to Use the System
 
